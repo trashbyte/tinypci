@@ -2,18 +2,29 @@
 // Copyright (c) 2020 trashbyte
 // See LICENSE.txt for full license
 
+#![doc(html_root_url = "https://docs.rs/tinypci/0.1.0")]
+
 #![feature(asm)]
 
+#[cfg(feature="std")] use std::fmt::{Display, Formatter, Error};
+
+#[cfg(not(feature="std"))] use core::fmt::{Display, Formatter, Error};
 #[cfg(not(feature="std"))] extern crate alloc;
 #[cfg(not(feature="std"))] use alloc::vec::Vec;
 #[cfg(not(feature="std"))] use alloc::string::String;
 #[cfg(not(feature="std"))] use alloc::format;
 
+#[cfg(feature = "serde")]
+#[macro_use]
+extern crate serde;
+
 mod enums;
 use enums::*;
 
 
-// extracted from the `x86_64` crate
+// Port I/O functions //////////////////////////////////////////////////////////
+
+// extracted from the `x86_64` crate.
 #[inline]
 unsafe fn read_from_port(port: u16) -> u32 {
     let value: u32;
@@ -21,12 +32,73 @@ unsafe fn read_from_port(port: u16) -> u32 {
     value
 }
 
+// extracted from the `x86_64` crate.
 #[inline]
 unsafe fn write_to_port(port: u16, value: u32) {
     asm!("outl %eax, %dx" :: "{dx}"(port), "{eax}"(value) :: "volatile");
 }
 
 
+// PciDeviceInfo ///////////////////////////////////////////////////////////////
+
+#[allow(dead_code)]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+/// A struct containing info about a PCI device.
+pub struct PciDeviceInfo {
+    pub device: u8,
+    pub bus: u8,
+    pub device_id: u16,
+    pub vendor_id: u16,
+    pub full_class: PciFullClass,
+    pub header_type: u8,
+    pub bars: [u32; 6],
+    pub supported_fns: [bool; 8],
+    pub interrupt_line: u8,
+    pub interrupt_pin: u8,
+}
+impl PciDeviceInfo {
+    /// Get the class of the PCI device as a PciClass
+    pub fn class(&self) -> PciClass {
+        PciClass::from_u8(((self.full_class.as_u16() >> 8) & 0xFF) as u8)
+    }
+    /// Get the full class of the PCI device as a PciFullClass
+    pub fn subclass(&self) -> PciClass {
+        PciClass::from_u8((self.full_class.as_u16() & 0xFF) as u8)
+    }
+}
+impl Display for PciDeviceInfo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        let vendor_name = name_for_vendor_id(self.vendor_id);
+        writeln!(f, "Device {:X} | Bus {:X} | Vendor: {}", self.device, self.bus, vendor_name)?;
+        writeln!(f, "    Class: {:?} ({:#06X})", self.full_class, self.full_class.as_u16())?;
+        writeln!(f, "    Header type: {:X}", self.header_type)?;
+        write!(f,   "    Supported functions: 0")?;
+        for (i, b) in self.supported_fns.iter().enumerate().skip(1) {
+            if *b {
+                write!(f, ", {}", i)?;
+            }
+        }
+        writeln!(f)?;
+        write!(f, "    BARs: [ ")?;
+        for i in self.bars.iter() {
+            if *i == 0 {
+                write!(f, "0x0 ")?;
+            }
+            else {
+                write!(f, "{:#010X} ", i)?;
+            }
+        }
+        writeln!(f, "]")?;
+        writeln!(f, "    Interrupt line / pin: {} / {}", self.interrupt_line, self.interrupt_pin)?;
+        Ok(())
+    }
+}
+
+
+// Public functions ////////////////////////////////////////////////////////////
+
+/// Converts a u16 vendor id into a human-readable name.
 pub fn name_for_vendor_id(vendor_id: u16) -> String {
     match vendor_id {
         0x8086 => "Intel Corp. (0x8086)".into(),
@@ -35,6 +107,7 @@ pub fn name_for_vendor_id(vendor_id: u16) -> String {
     }
 }
 
+/// Brute force scans for devices 0-31 on busses 0-255.
 pub fn brute_force_scan() -> Vec<PciDeviceInfo> {
     let mut infos = Vec::new();
     for bus in 0u8..=255 {
@@ -46,6 +119,9 @@ pub fn brute_force_scan() -> Vec<PciDeviceInfo> {
     }
     infos
 }
+
+
+// Internal functions //////////////////////////////////////////////////////////
 
 fn check_device(bus: u8, device: u8) -> Option<PciDeviceInfo> {
     assert!(device < 32);

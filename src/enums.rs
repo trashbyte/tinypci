@@ -1,8 +1,7 @@
-#[cfg(feature="std")] use std::fmt::{Display, Formatter, Error};
-#[cfg(not(feature="std"))] use core::fmt::{Display, Formatter, Error};
-
+/// The major class specification for a PCI device.
 #[allow(dead_code)]
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[repr(C)]
 pub enum PciClass {
     Unclassified = 0x00,
@@ -15,6 +14,7 @@ pub enum PciClass {
     Other = 0xFF,
 }
 impl PciClass {
+    /// Convert a u8 into the corresponding PciClass
     pub fn from_u8(n: u8) -> PciClass {
         match n {
             0x00 => PciClass::Unclassified,
@@ -27,12 +27,23 @@ impl PciClass {
             _ => PciClass::Other
         }
     }
+    /// Convert a PciClass to its u8 representation
     pub fn as_u8(&self) -> u8 { *self as u8 }
+}
+impl From<u8> for PciClass {
+    /// Convert a u8 into the corresponding PciClass
+    fn from(n: u8) -> Self {
+        Self::from_u8(n)
+    }
 }
 
 #[allow(non_camel_case_types, dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[repr(C)]
+/// Full class specification (type and subtype) for a PCI device.
+///
+/// Uses non-camel-case types for readability.
 pub enum PciFullClass {
     Unclassified_NonVgaCompatible = 0x0000,
     Unclassified_VgaCompatible = 0x0001,
@@ -93,6 +104,7 @@ impl PciFullClass {
     // listen, i know this sucks, but i didn't want to include
     // `num`, `num-traits` and `num-derive` as dependencies for
     // this crate just for a convenience function
+    /// Convert a u16 into the corresponding PciFullClass
     pub fn from_u16(n: u16) -> PciFullClass {
         match n {
             0x0000 => PciFullClass::Unclassified_NonVgaCompatible,
@@ -151,55 +163,12 @@ impl PciFullClass {
             _ => PciFullClass::Unknown
         }
     }
+    /// Convert a PciFullClass to its u16 representation
     pub fn as_u16(&self) -> u16 { *self as u16 }
 }
-
-#[allow(dead_code)]
-#[derive(Clone, Debug)]
-pub struct PciDeviceInfo {
-    pub device: u8,
-    pub bus: u8,
-    pub device_id: u16,
-    pub vendor_id: u16,
-    pub full_class: PciFullClass,
-    pub header_type: u8,
-    pub bars: [u32; 6],
-    pub supported_fns: [bool; 8],
-    pub interrupt_line: u8,
-    pub interrupt_pin: u8,
-}
-impl PciDeviceInfo {
-    pub fn class(&self) -> PciClass {
-        PciClass::from_u8(((self.full_class.as_u16() >> 8) & 0xFF) as u8)
-    }
-    pub fn subclass(&self) -> PciClass {
-        PciClass::from_u8((self.full_class.as_u16() & 0xFF) as u8)
-    }
-}
-impl Display for PciDeviceInfo {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-        let vendor_name = super::name_for_vendor_id(self.vendor_id);
-        writeln!(f, "Device {:X} | Bus {:X} | Vendor: {}", self.device, self.bus, vendor_name)?;
-        writeln!(f, "    Class: {:?} ({:#06X})", self.full_class, self.full_class.as_u16())?;
-        writeln!(f, "    Header type: {:X}", self.header_type)?;
-        write!(f,   "    Supported functions: 0")?;
-        for (i, b) in self.supported_fns.iter().enumerate().skip(1) {
-            if *b {
-                write!(f, ", {}", i)?;
-            }
-        }
-        writeln!(f)?;
-        write!(f, "    BARs: [ ")?;
-        for i in self.bars.iter() {
-            if *i == 0 {
-                write!(f, "0x0 ")?;
-            }
-            else {
-                write!(f, "{:#010X} ", i)?;
-            }
-        }
-        writeln!(f, "]")?;
-        writeln!(f, "    Interrupt line / pin: {} / {}", self.interrupt_line, self.interrupt_pin)?;
-        Ok(())
+impl From<u16> for PciFullClass {
+    /// Convert a u16 into the corresponding PciFullClass
+    fn from(n: u16) -> Self {
+        Self::from_u16(n)
     }
 }

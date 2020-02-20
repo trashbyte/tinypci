@@ -1,9 +1,18 @@
 [package]
-name = "pci"
+name = "tinypci"
+description = "A simple, safe, rusty toolset for reading and writing PCI configuration memory"
 version = "0.1.0"
 authors = ["trashbyte <github@trashbyte.io>"]
 edition = "2018"
+license = "MIT"
+repository = "https://github.com/trashbyte/tinypci"
+readme = "README.md"
+keywords = ["pci", "pcie", "standalone", "x86", "x86-64"]
+categories = ["embedded", "no-std", "hardware-support"]
 
 [features]
 std = []
 default = ["std"]
+
+[dependencies]
+serde = { version = "1.0", optional = true, features = ["derive"] }
