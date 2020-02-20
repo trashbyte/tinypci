@@ -1,0 +1,12 @@
+[package]
+name = "pci"
+version = "0.1.0"
+authors = ["trashbyte <github@trashbyte.io>"]
+edition = "2018"
+
+[features]
+std = []
+default = ["std"]
+
+[dependencies]
+x86_64 = { version = "=0.8.1", default-features = false }
