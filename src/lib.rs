@@ -2,9 +2,11 @@
 // Copyright (c) 2020 trashbyte
 // See LICENSE.txt for full license
 
-#![doc(html_root_url = "https://docs.rs/tinypci/0.1.0")]
+#![doc(html_root_url = "https://docs.rs/tinypci")]
 
 #![feature(asm)]
+
+#![cfg_attr(not(feature="std"), no_std)]
 
 #[cfg(feature="std")] use std::fmt::{Display, Formatter, Error};
 
