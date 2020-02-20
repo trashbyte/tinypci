@@ -2,7 +2,7 @@
 // Copyright (c) 2020 trashbyte
 // See LICENSE.txt for full license
 
-use x86_64::instructions::port::Port;
+#![feature(asm)]
 
 #[cfg(not(feature="std"))] extern crate alloc;
 #[cfg(not(feature="std"))] use alloc::vec::Vec;
@@ -11,6 +11,21 @@ use x86_64::instructions::port::Port;
 
 mod enums;
 use enums::*;
+
+
+// extracted from the `x86_64` crate
+#[inline]
+unsafe fn read_from_port(port: u16) -> u32 {
+    let value: u32;
+    asm!("inl %dx, %eax" : "={eax}"(value) : "{dx}"(port) :: "volatile");
+    value
+}
+
+#[inline]
+unsafe fn write_to_port(port: u16, value: u32) {
+    asm!("outl %eax, %dx" :: "{dx}"(port), "{eax}"(value) :: "volatile");
+}
+
 
 pub fn name_for_vendor_id(vendor_id: u16) -> String {
     match vendor_id {
@@ -91,12 +106,10 @@ unsafe fn pci_config_read(bus: u8, device: u8, func: u8, offset: u8) -> u32 {
     let address = ((bus << 16) | (device << 11) | (func << 8) | (offset & 0xfc) | 0x80000000) as u32;
 
     // write address
-    let mut port = Port::new(0xCF8);
-    port.write(address);
+    write_to_port(0xCF8, address);
 
     // read data
-    let mut port = Port::new(0xCFC);
-    port.read()
+    read_from_port(0xCFC)
 }
 
 #[allow(dead_code)]
@@ -109,10 +122,10 @@ unsafe fn pci_config_write(bus: u8, device: u8, func: u8, offset: u8, value: u32
     let address = ((bus << 16) | (device << 11) | (func << 8) | (offset & 0xfc) | 0x80000000) as u32;
 
     // write address
-    Port::new(0xCF8).write(address);
+    write_to_port(0xCF8, address);
 
-    // read data
-    Port::new(0xCFC).write(value)
+    // write data
+    write_to_port(0xCFC, value)
 }
 
 fn get_header_type(bus: u8, device: u8, function: u8) -> u8 {
