@@ -21,7 +21,7 @@
 extern crate serde;
 
 mod enums;
-use enums::*;
+pub use enums::*;
 
 
 // Port I/O functions //////////////////////////////////////////////////////////
