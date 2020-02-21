@@ -1,4 +1,4 @@
-## tinypci
+## tinypci &ensp; [![Crates.io (latest)](https://img.shields.io/badge/tinypci%20@%200.1.0-crates.io-brightgreen)](https://crates.io/crates/tinypci)
 
 A simple, safe, rusty toolset for reading and writing PCI configuration memory.
 I'm using it as part of my [untitled os project](https://github.com/trashbyte/os).
