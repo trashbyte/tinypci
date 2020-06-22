@@ -4,7 +4,7 @@
 
 #![doc(html_root_url = "https://docs.rs/tinypci")]
 
-#![feature(asm)]
+#![feature(llvm_asm)]
 
 #![cfg_attr(not(feature="std"), no_std)]
 
