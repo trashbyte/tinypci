@@ -30,14 +30,14 @@ pub use enums::*;
 #[inline]
 unsafe fn read_from_port(port: u16) -> u32 {
     let value: u32;
-    asm!("inl %dx, %eax" : "={eax}"(value) : "{dx}"(port) :: "volatile");
+    llvm_asm!("inl %dx, %eax" : "={eax}"(value) : "{dx}"(port) :: "volatile");
     value
 }
 
 // extracted from the `x86_64` crate.
 #[inline]
 unsafe fn write_to_port(port: u16, value: u32) {
-    asm!("outl %eax, %dx" :: "{dx}"(port), "{eax}"(value) :: "volatile");
+    llvm_asm!("outl %eax, %dx" :: "{dx}"(port), "{eax}"(value) :: "volatile");
 }
 
 
