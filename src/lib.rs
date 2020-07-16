@@ -4,7 +4,7 @@
 
 #![doc(html_root_url = "https://docs.rs/tinypci")]
 
-#![feature(llvm_asm)]
+#![feature(asm)]
 
 #![cfg_attr(not(feature="std"), no_std)]
 
@@ -30,14 +30,14 @@ pub use enums::*;
 #[inline]
 unsafe fn read_from_port(port: u16) -> u32 {
     let value: u32;
-    llvm_asm!("inl %dx, %eax" : "={eax}"(value) : "{dx}"(port) :: "volatile");
+    asm!("inl eax, dx", out("eax") value, in("dx") port);
     value
 }
 
 // extracted from the `x86_64` crate.
 #[inline]
 unsafe fn write_to_port(port: u16, value: u32) {
-    llvm_asm!("outl %eax, %dx" :: "{dx}"(port), "{eax}"(value) :: "volatile");
+    asm!("outl eax, dx", out("dx") port, in("eax") value);
 }
 
 
