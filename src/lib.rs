@@ -37,7 +37,7 @@ unsafe fn read_from_port(port: u16) -> u32 {
 // extracted from the `x86_64` crate.
 #[inline]
 unsafe fn write_to_port(port: u16, value: u32) {
-    asm!("outl eax, dx", out("dx") port, in("eax") value);
+    asm!("outl dx, eax", out("dx") port, in("eax") value);
 }
 
 
