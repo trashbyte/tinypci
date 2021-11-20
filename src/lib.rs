@@ -1,5 +1,5 @@
 // The MIT License (MIT)
-// Copyright (c) 2020 trashbyte
+// Copyright (c) 2021 trashbyte
 // See LICENSE.txt for full license
 
 #![doc(html_root_url = "https://docs.rs/tinypci")]
@@ -8,13 +8,15 @@
 
 #![cfg_attr(not(feature="std"), no_std)]
 
-#[cfg(feature="std")] use std::fmt::{Display, Formatter, Error};
+#[cfg(feature="std")]
+use std::fmt::{Display, Formatter, Error};
 
-#[cfg(not(feature="std"))] use core::fmt::{Display, Formatter, Error};
-#[cfg(not(feature="std"))] extern crate alloc;
-#[cfg(not(feature="std"))] use alloc::vec::Vec;
-#[cfg(not(feature="std"))] use alloc::string::String;
-#[cfg(not(feature="std"))] use alloc::format;
+#[cfg(not(feature="std"))]
+extern crate alloc;
+#[cfg(not(feature="std"))]
+use alloc::{vec::Vec, string::String, format};
+#[cfg(not(feature="std"))]
+use core::fmt::{Display, Formatter, Error};
 
 #[cfg(feature = "serde")]
 #[macro_use]
@@ -23,22 +25,8 @@ extern crate serde;
 mod enums;
 pub use enums::*;
 
-
-// Port I/O functions //////////////////////////////////////////////////////////
-
-// extracted from the `x86_64` crate.
-#[inline]
-unsafe fn read_from_port(port: u16) -> u32 {
-    let mut value: u32;
-    asm!("in eax, dx", out("eax") value, in("dx") port);
-    value
-}
-
-// extracted from the `x86_64` crate.
-#[inline]
-unsafe fn write_to_port(port: u16, value: u32) {
-    asm!("out dx, eax", in("dx") port, in("eax") value);
-}
+mod port;
+use port::*;
 
 
 // PciDeviceInfo ///////////////////////////////////////////////////////////////
@@ -109,7 +97,7 @@ pub fn name_for_vendor_id(vendor_id: u16) -> String {
     }
 }
 
-/// Brute force scans for devices 0-31 on busses 0-255.
+/// Brute force scans for devices 0-31 on buses 0-255.
 pub fn brute_force_scan() -> Vec<PciDeviceInfo> {
     let mut infos = Vec::new();
     for bus in 0u8..=255 {
@@ -184,10 +172,10 @@ unsafe fn pci_config_read(bus: u8, device: u8, func: u8, offset: u8) -> u32 {
     let address = ((bus << 16) | (device << 11) | (func << 8) | (offset & 0xfc) | 0x80000000) as u32;
 
     // write address
-    write_to_port(0xCF8, address);
+    unsafe { Port::<u32>::new(0xCF8).write(address); }
 
     // read data
-    read_from_port(0xCFC)
+    unsafe { Port::<u32>::new(0xCFC).read() }
 }
 
 #[allow(dead_code)]
@@ -200,10 +188,10 @@ unsafe fn pci_config_write(bus: u8, device: u8, func: u8, offset: u8, value: u32
     let address = ((bus << 16) | (device << 11) | (func << 8) | (offset & 0xfc) | 0x80000000) as u32;
 
     // write address
-    write_to_port(0xCF8, address);
+    unsafe { Port::<u32>::new(0xCF8).write(address); }
 
     // write data
-    write_to_port(0xCFC, value)
+    unsafe { Port::<u32>::new(0xCFC).write(value); }
 }
 
 fn get_header_type(bus: u8, device: u8, function: u8) -> u8 {
